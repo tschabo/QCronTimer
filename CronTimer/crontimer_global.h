@@ -1,0 +1,12 @@
+#ifndef CRONTIMER_GLOBAL_H
+#define CRONTIMER_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(CRONTIMER_LIBRARY)
+#  define CRONTIMERSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define CRONTIMERSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // CRONTIMER_GLOBAL_H
