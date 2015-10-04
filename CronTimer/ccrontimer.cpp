@@ -99,7 +99,7 @@ void CCronTimer::internTimedOut()
 
 void CCronTimer::privateStart()
 {
-    time_t diff = c_cronCalc.nextExecutionDiff(c_nextExec);
+    time_t diff = c_cronCalc.nextExecutionDiff(time(nullptr));
 
     assert(diff >= 0);
 

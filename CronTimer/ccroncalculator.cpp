@@ -38,8 +38,6 @@ time_t CCronCalculator::nextExecution(bool bUTC)
 {
     time_t next = time(nullptr);
 
-    printf(ctime(&next));
-
     if(next == -1)
         return -1;
 
@@ -47,8 +45,6 @@ time_t CCronCalculator::nextExecution(bool bUTC)
 
     next = next - converted.tm_sec; // reset seconds
     next = next + 60; // next minute
-
-    printf(ctime(&next));
 
     while(true)
     {
@@ -88,7 +84,6 @@ time_t CCronCalculator::nextExecution(bool bUTC)
         break;
     }
 
-    printf(ctime(&next));
     return next;
 }
 
