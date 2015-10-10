@@ -43,7 +43,7 @@ void CCronTimer::timerEvent(QTimerEvent *pEvent)
     std::lock_guard<std::mutex> lock(c_mtxNextExec);
     killTimer(c_timerId);
     c_timerId = 0;
-    if(c_nextExec < time(nullptr))
+    if(c_nextExec > time(nullptr))
     {
         c_timerId = startTimer(calcDiffTime());
         assert(c_timerId);
