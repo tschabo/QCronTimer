@@ -49,7 +49,6 @@ private:
     bool initPart(const std::pair<ECronPart, SMinMax> &part, const std::string &crontabPartSpec);
     int getNextTo(const ECronPart part, const int val, bool *pOverflow = nullptr);
     int toInt(const std::string &s, bool *pOk = nullptr);
-    static std::mutex c_mtxToTm;
 };
 
 #endif // CCRONCALCULATOR_H

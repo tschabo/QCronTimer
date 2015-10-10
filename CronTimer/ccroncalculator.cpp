@@ -3,7 +3,13 @@
 #include <algorithm>
 #include <time.h>
 
-std::mutex CCronCalculator::c_mtxToTm;
+#if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || _POSIX_SOURCE
+#define SAFEGMTIME(X,Y) gmtime_r(X,Y)
+#define SAFELOCALTIME(X,Y) localtime_r(X,Y)
+#elif _WIN32
+#define SAFEGMTIME(X,Y) gmtime_s(Y,X)
+#define SAFELOCALTIME(X,Y) localtime_s(Y,X)
+#endif
 
 CCronCalculator::CCronCalculator()
 {
@@ -284,14 +290,12 @@ int CCronCalculator::toInt(const std::string &s, bool *pOk)
 
 tm CCronCalculator::toTm(const time_t &t, bool bUTC)
 {
-    std::lock_guard<std::mutex> lock (c_mtxToTm);
-
-    struct tm * pTm;
+    tm tmp;
 
     if(bUTC)
-        pTm = gmtime(&t);
+        SAFEGMTIME(&t, &tmp);
     else
-        pTm = gmtime(&t);
+        SAFELOCALTIME(&t, &tmp);
 
-    return *pTm;
+    return tmp;
 }
