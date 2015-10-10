@@ -1,9 +1,12 @@
 #include "ccrontimer.h"
 #include <limits.h>
 #include <assert.h>
-#ifdef CRONTIMER_DEBUG
+#include <QDateTime>
+#include <QTimerEvent>
 #include <stdio.h>
-#endif
+
+#include <QDebug>
+
 
 CCronTimer::CCronTimer(QObject *parent) :
     QObject(parent)
@@ -15,98 +18,53 @@ void CCronTimer::setSingleShot(bool singleShot)
     c_singleShot = singleShot;
 }
 
-void CCronTimer::singleShot(const CCronCalculator &cc)
-{
-
-}
-
 void CCronTimer::start(const CCronCalculator &cc)
 {
     c_cronCalc.setCronspec(cc.getCronspec());
+    std::lock_guard<std::mutex> lock(c_mtxNextExec);
     c_nextExec = c_cronCalc.nextExecution();
-    privateStart();
+    c_timerId = startTimer(calcDiffTime());
+    assert(c_timerId);
 }
 
 void CCronTimer::stop()
 {
+    std::lock_guard<std::mutex> lock(c_mtxNextExec);
+    c_nextExec = -1;
+    killTimer(c_timerId);
 }
 
-void CCronTimer::internTimedOut()
+void CCronTimer::timerEvent(QTimerEvent *pEvent)
 {
-    if(!c_overflow)
-    {
-
-        if(!c_notAccurate)
-        {
-#ifdef CRONTIMER_DEBUG
-            printf("timeout() signaled !\n");
-#endif
-            emit timeout();
-        }
-
-        if(c_singleShot)
-            return;
-
-        if(c_nextExec == c_cronCalc.nextExecution())
-        {
-#ifdef CRONTIMER_DEBUG
-            printf("timer was not accurate !\n");
-#endif
-            c_notAccurate = true;
-            QTimer::singleShot(500, this, SLOT(internTimedOut()));
-        }
-        else
-        {
-            c_notAccurate = false;
-            start(c_cronCalc);
-#ifdef CRONTIMER_DEBUG
-            printf("restarted timer (not singleshot) !\n");
-#endif
-            return;
-        }
-    }
-    else
-    {
-#ifdef CRONTIMER_DEBUG
-        printf("restart after overflow !\n");
-#endif
-        privateStart();
+    if(pEvent->timerId() != c_timerId)
         return;
-    }
 
-    emit timeout();
-
-    if(!c_singleShot)
+    qDebug() << "intern timeout";
+    std::lock_guard<std::mutex> lock(c_mtxNextExec);
+    killTimer(c_timerId);
+    c_timerId = 0;
+    if(c_nextExec < time(nullptr))
     {
-        time_t next = c_cronCalc.nextExecution();
-#ifdef CRONTIMER_DEBUG
-        printf("%i ... %i \n", c_nextExec, next);
-#endif
-        if(c_nextExec == next)
+        c_timerId = startTimer(calcDiffTime());
+        assert(c_timerId);
+    }
+    else
+    {
+        emit timeout();
+        if(!c_singleShot)
         {
-            c_notAccurate = true;
-            int nextExecMs = (time(nullptr) - c_nextExec) * 1000;
-#ifdef CRONTIMER_DEBUG
-            printf("%i\n",  nextExecMs);
-#endif
-            if (nextExecMs > 0)
-
-            QTimer::singleShot(nextExecMs, this, SLOT(internTimedOut()));
+            c_nextExec = c_cronCalc.nextExecution();
+            c_timerId = startTimer(calcDiffTime());
         }
-        start(c_cronCalc);
     }
 }
 
-void CCronTimer::privateStart()
+time_t CCronTimer::calcDiffTime()
 {
-    time_t diff = c_cronCalc.nextExecutionDiff(time(nullptr));
-
-    assert(diff >= 0);
-
-    c_overflow = (diff >= INT_MAX / 1000) ? true : false;
-
-    if(c_overflow)
-        QTimer::singleShot(INT_MAX, this, SLOT(internTimedOut()));
-    else
-        QTimer::singleShot(diff * 1000, this, SLOT(internTimedOut()));
+    time_t t = QDateTime::currentDateTime().msecsTo(QDateTime::fromTime_t(0).addSecs(c_nextExec));
+    if(t < 0)
+        return 0;
+    if(t > INT_MAX)
+        return INT_MAX;
+    return t;
 }

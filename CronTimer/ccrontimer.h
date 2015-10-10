@@ -17,8 +17,6 @@ public:
 
     void setSingleShot(bool singleShot);
 
-    static void singleShot(const CCronCalculator& cc);
-
 signals:
     void timeout();
 
@@ -26,16 +24,16 @@ public slots:
     void start(const CCronCalculator& cc);
     void stop();
 
-private slots:
-    void internTimedOut();
-
 private:
-    void privateStart();
-    bool c_singleShot = false;
-    bool c_overflow = false;
-    bool c_notAccurate = false;
     CCronCalculator c_cronCalc;
-    time_t c_nextExec = 0;
+    bool c_singleShot= false;
+    int c_timerId = 0;
+    time_t c_nextExec = -1;
+    std::mutex c_mtxNextExec;
+
+    void timerEvent(QTimerEvent *pEvent) override;
+
+    time_t calcDiffTime();
 };
 
 #endif // CCRONTIMER_H
